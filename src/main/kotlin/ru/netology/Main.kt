@@ -1,59 +1,102 @@
 package ru.netology
 
-val cardTypeVisa = "Visa"
-val cardTypeMasterCard = "MasterCard"
-val cardTypeMaestro = "Maestro"
-val cardTypeVKPay = "VKPay"
-val cardTypeMir = "Мир"
-val periodMonth = "Month"
-val periodDay = "Day"
+const val cardTypeVisa = "Visa"
+const val cardTypeMasterCard = "MasterCard"
+const val cardTypeMaestro = "Maestro"
+const val cardTypeVKPay = "VKPay"
+const val cardTypeMir = "Мир"
+const val periodMonth = "Month"
+const val periodDay = "Day"
 
 fun main() {
 
-    val transferIn = true
-    val transferOut = false
+    val commissionForIncomingTransfers = 0
 
-    transfer(transferIn, cardTypeVKPay, periodDay, 16_000_00, 80_000_00)
-    transfer(transferIn, cardTypeVKPay, periodDay, 10_000_00, 80_000_00)
-    transfer(transferIn, cardTypeVKPay, periodDay, 10_000_00, 25_000_00)
-    transfer(transferOut, cardTypeMaestro, periodMonth, 76_000_00, 80_000_00)
-    transfer(transferOut, cardTypeMaestro, periodMonth, 55_000_00, 600_000_00)
-    transfer(transferOut, cardTypeMaestro, periodMonth, 176_000_00, 80_000_00)
-    transfer (transferIn, cardTypeVisa, periodMonth, 76_000_00, 80_000_00)
+//    val transferIn = true
+//    val cardType = cardTypeVKPay
+//    val dayTransferAmount = 12_000_00
+//    val monthTransferAmount = 30_000_00
+//
+//    val transferIn = true
+//    val cardType = cardTypeVKPay
+//    val dayTransferAmount = 12_000_00
+//    val monthTransferAmount = 80_000_00
+//
+//    val transferIn = true
+//    val cardType = cardTypeVKPay
+//    val dayTransferAmount = 16_000_00
+//    val monthTransferAmount = 30_000_00
+//
+//    val transferIn = true
+//    val cardType = cardTypeVisa
+//    val dayTransferAmount = 12_000_00
+//    val monthTransferAmount = 30_000_00
+//
+//    val transferIn = false
+//    val cardType = cardTypeVisa
+//    val dayTransferAmount = 180_000_00
+//    val monthTransferAmount = 30_000_00
+//
+//    val transferIn = false
+//    val cardType = cardTypeVisa
+//    val dayTransferAmount = 12_000_00
+//    val monthTransferAmount = 700_000_00
 
-}
+    val transferIn = false
+    val cardType = cardTypeMasterCard
+    val dayTransferAmount = 12_000_00
+    val monthTransferAmount = 85_000_00
 
-fun transfer(
-    transferIn: Boolean,
-    cardType: String,
-    LimitType: String,
-    dayTransferAmount: Int,
-    monthTransferAmount: Int
-) {
+//    val transferIn = false
+//    val cardType = cardTypeMasterCard
+//    val dayTransferAmount = 85_000_00
+//    val monthTransferAmount = 30_000_00
+
+//    val transferIn = false
+//    val cardType = cardTypeMasterCard
+//    val dayTransferAmount = 200_000_00
+//    val monthTransferAmount = 30_000_00
+
+    val isPossibleDay = cashTransferPossible(transferIn, cardType, dayTransferAmount, periodDay)
+    val isPossibleMonth = cashTransferPossible(transferIn, cardType, monthTransferAmount, periodMonth)
 
     when {
-        cashTransferPossible(transferIn, cardType, LimitType, dayTransferAmount, monthTransferAmount) -> {
-            val comission = calculateComission(cardType, monthTransferAmount, dayTransferAmount)
-            val totalSum = dayTransferAmount + comission
+        isPossibleDay && isPossibleMonth -> {
+            //если перевод возможен, то:
+            val comission: Int
+            val totalSum: Int
             if (transferIn) {
+                comission = commissionForIncomingTransfers
+                totalSum = dayTransferAmount + comission
                 println("Зачисление на сумму: ${convertPriceToString(dayTransferAmount)}")
-                printMessage (cardType, comission, totalSum)
+                printMessage(cardType, comission, totalSum)
             } else {
+                comission = calculateComission(transferIn, cardType, monthTransferAmount, dayTransferAmount)
+                totalSum = dayTransferAmount + comission
                 println("Списание на сумму: ${convertPriceToString(dayTransferAmount)}")
-                printMessage (cardType, comission, totalSum)
+                printMessage(cardType, comission, totalSum)
             }
         }
-        (transferIn && LimitType == periodDay) || (transferIn && LimitType == periodMonth) -> {
-            println("Вы превысили лимит на зачисление средств")
+        (transferIn && !isPossibleDay) -> {
+            println("Вы превысили дневной лимит на зачисление средств")
         }
-        (!transferIn && LimitType == periodDay) || (!transferIn && LimitType == periodMonth) -> {
-            println("Вы превысили дневной лимит на средств")
+        (!transferIn && !isPossibleDay) -> {
+            println("Вы превысили дневной лимит на списание средств")
         }
-        else -> println("Что-то пошло не так")
+        (transferIn && !isPossibleMonth) -> {
+            println("Вы превысили лимит на зачисление средств в месяц")
+        }
+        (!transferIn && !isPossibleMonth) -> {
+            println("Вы превысили лимит на списание средств в месяц")
+        }
+        else -> {
+            println("Что-то пошло не так")
+        }
     }
+
 }
 
-fun printMessage (cardType: String, comission: Int, totalSum: Int) {
+fun printMessage(cardType: String, comission: Int, totalSum: Int) {
     println("Счёт: $cardType")
     println("Комиссия: ${convertPriceToString(comission)}")
     println("Итого: ${convertPriceToString(totalSum)}")
@@ -62,9 +105,8 @@ fun printMessage (cardType: String, comission: Int, totalSum: Int) {
 fun cashTransferPossible(
     transferIn: Boolean = true,
     cardType: String = cardTypeVKPay,
-    LimitType: String = periodDay,
-    dayTransferAmount: Int,
-    monthTransferAmount: Int
+    transferSum: Int,
+    limitType: String
 ): Boolean {
 
     val cashflowInLimitDay = 150_000_00
@@ -76,34 +118,40 @@ fun cashTransferPossible(
 
     return when {
         cardType == cardTypeVKPay -> {
-            cashLimitCheck(cashflowVKLimitDay, cashflowVKLimitMonth, dayTransferAmount, monthTransferAmount)
+            if (limitType == periodDay) {
+                transferSum < cashflowVKLimitDay
+            } else {
+                transferSum < cashflowVKLimitMonth
+            }
         }
         cardType != cardTypeVKPay && transferIn -> {
-            cashLimitCheck(cashflowInLimitDay, cashflowInLimitMonth, dayTransferAmount, monthTransferAmount)
+            if (limitType == periodDay) {
+                transferSum < cashflowInLimitDay
+            } else {
+                transferSum < cashflowInLimitMonth
+            }
         }
         cardType != cardTypeVKPay && !transferIn -> {
-            cashLimitCheck(cashflowOutLimitDay, cashflowOutLimitMonth, dayTransferAmount, monthTransferAmount)
+            if (limitType == periodDay) {
+                transferSum < cashflowOutLimitDay
+            } else {
+                transferSum < cashflowOutLimitMonth
+            }
         }
         else -> false
     }
 }
-    fun cashLimitCheck(
-        limitDay: Int,
-        limitMonth: Int,
-        transferDay: Int,
-        transferMonth: Int,
-    ): Boolean {
-        return transferDay < limitDay && transferMonth < limitMonth
-    }
 
-    fun calculateComission(
-        cardType: String = cardTypeVKPay,
-        monthTransferAmount: Int = 0,
-        transfer: Int
-    ): Int {
-        val monthTransferLimitMaestroMasterCard = 75_000_00
+fun calculateComission(
+    transferIn: Boolean = true,
+    cardType: String = cardTypeVKPay,
+    monthTransferAmount: Int = 0,
+    transfer: Int
+): Int {
+    val monthTransferLimitMaestroMasterCard = 75_000_00
 
-        return when (cardType) {
+    return if (!transferIn) {
+        when (cardType) {
             cardTypeMasterCard, cardTypeMaestro -> {
                 if (monthTransferAmount > monthTransferLimitMaestroMasterCard) {
                     mastrercardMaestroComissionCalculator(transfer)
@@ -114,26 +162,28 @@ fun cashTransferPossible(
             }
             else -> 0
         }
-    }
+    } else 0
 
-    fun mastrercardMaestroComissionCalculator(transfer: Int): Int {
-        val comissionPercent = 0.006
-        val comissionTaxRub = 20_00
-        return (transfer * comissionPercent + comissionTaxRub).toInt()
-    }
+}
 
-    fun visaMirComissionCalculator(transfer: Int): Int {
-        val comissionPercent = 0.0075
-        val comissionTaxMin = 35_00
-        val comission = (transfer * comissionPercent).toInt()
-        return if (comission <= comissionTaxMin) comissionTaxMin else comission
-    }
+fun mastrercardMaestroComissionCalculator(transfer: Int): Int {
+    val comissionPercent = 0.006
+    val comissionTaxRub = 20_00
+    return (transfer * comissionPercent + comissionTaxRub).toInt()
+}
 
-    fun convertPriceToString(sum: Int): String {
-        val sumValueRub = sum / 100
-        val sumValueCop = sum % 100
-        val sumValueCopFormatted: String = String.format("%02d", sumValueCop)
-        return sumValueRub.toString() + " руб. " + sumValueCopFormatted + "коп."
-    }
+fun visaMirComissionCalculator(transfer: Int): Int {
+    val comissionPercent = 0.0075
+    val comissionTaxMin = 35_00
+    val comission = (transfer * comissionPercent).toInt()
+    return if (comission <= comissionTaxMin) comissionTaxMin else comission
+}
+
+fun convertPriceToString(sum: Int): String {
+    val sumValueRub = sum / 100
+    val sumValueCop = sum % 100
+    val sumValueCopFormatted: String = String.format("%02d", sumValueCop)
+    return sumValueRub.toString() + " руб. " + sumValueCopFormatted + "коп."
+}
 
 
